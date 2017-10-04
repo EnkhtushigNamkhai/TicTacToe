@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Games</title>
+		<link rel="stylesheet" href="main.css">
+		<link rel="stylesheet" href="jquery.simplecolorpicker.css">
+		<link href="https://fonts.googleapis.com/css?family=Nunito" rel="stylesheet">
+
+		<script src="jquery.js"></script>
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+		<script src="jquery.simplecolorpicker.js"></script>
+		<script src ="app.js"></script>
+		
+	</head>
+	<body>
+		<div class= 'title'>
+			<h1>Tic Tac Toe</h1>
+		</div>
+
+		<div class = 'gameSelectorCont'>
+			<p>How many players?</p>
+			<div class = 'circleCont'>
+				<p>1</p>
+			</div>
+			<div class = 'circleCont'>
+				<p>2</p>		
+			</div>
+		</div>
+
+		<!-- The tic tac toe board -->
+		<div class = 'BoardWrapper'>
+			<div class = 'Board'>	
+				<div class = 'row'>
+					<div class = 'col' data-num = '0'></div>
+					<div class = 'col' data-num = '1'></div>
+					<div class = 'col' data-num = '2'></div>
+				</div>
+
+				<div class = 'row'>
+					<div class = 'col' data-num = '3'></div>
+					<div class = 'col' data-num = '4'></div>
+					<div class = 'col' data-num = '5'></div>
+				</div>
+
+				<div class = 'row'>
+					<div class = 'col' data-num = '6'></div>
+					<div class = 'col' data-num = '7'></div>
+					<div class = 'col' data-num = '8'></div>
+				</div>
+			</div>
+			<p id = 'text'></p>
+			<select name="colorpicker-shortlist">
+			  <option value="#5484ed" id = 'BB'>Bold blue</option>
+			  <option value="#a4bdfc" id = 'B'>Blue</option>
+			  <option value="#7ae7bf" id = 'LG'>Light green</option>
+			  <option value="#ff887c" id = 'R'>Red</option>
+			  <option value="#dbadff" id = 'P'>Purple</option>
+			</select>
+			<button id = 'ok'>OK</button>
+
+			<div id = 'options'>
+				<button id ='home'>Home</button>
+				<button id = 'replay'>Replay</button>
+			</div>
+		</div>
+	</body>
+</html>
