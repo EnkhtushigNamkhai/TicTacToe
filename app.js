@@ -146,7 +146,7 @@ function colClicked() {
 }
 
 function checkWin(PlayerNum, boardIndex, bool) {
-	if (checkDiagonal(PlayerNum) || checkColumn(boardIndex, PlayerNum) || checkRow(boardIndex, PlayerNum)) {
+	if (checkDiagonal(PlayerNum, board) || checkColumn(boardIndex, PlayerNum) || checkRow(boardIndex, PlayerNum)) {
 		if (bool) {
 			$('#text').text('The Computer WON!');
 		} else {
@@ -170,9 +170,16 @@ function checkWin(PlayerNum, boardIndex, bool) {
 function computerMove() {
 	//disable clicks
 	$('.col').off('click');
-	console.log('computerMove called');
 	numValid++;
-	var move = moveHelper(); 
+	// var move = moveHelper();
+	console.log('minmax called');
+	minmax(deepCopyBoard(board) , 0, 2);
+	var move = choice;
+	console.log('MINMAX RETURNS CHOSEN MOVE IS ' + move);
+
+	
+	
+	 
 	var PlayerNum = getPlayerNumber(currentPlayerColor);
     board[move[0]][move[1]] = String(PlayerNum);
 
@@ -186,6 +193,8 @@ function computerMove() {
 
 // comes up with a index [,] of where in the array it will go to
 function moveHelper() {
+	// minmax(board, 0, 2);
+	// board = choice;
 	//choose random number between 0 - 8.
 	var boardIndex = getBoardIndex(Math.floor(Math.random() * 8 + 1));
 	while(board[boardIndex[0]][boardIndex[1]] !== '0') {
@@ -193,6 +202,169 @@ function moveHelper() {
 	}
 	return boardIndex;
 }
+
+var choice;
+
+//returns the score 
+
+var firstTIMEHERE = true;
+function minmax(state, depth, playerNum) {
+	var scores = [];
+	var moves = [];
+
+	depth += 1;
+	//if the game is over
+	if (gameOver(state)) {
+		var result = score(state, depth);
+		return result;
+	}
+
+
+	if (playerNum === 2) {
+		opposingPlayer = 1;
+	} else {
+		opposingPlayer = 2;
+	}
+	
+	var AvailableMoves = getAvailableMoves(state);
+	for (var i = 0; i < AvailableMoves.length; i++) {
+		var newState = getBoardState(state, AvailableMoves[i], playerNum);
+		var stateScore = minmax(newState, depth, opposingPlayer);
+		moves.push(AvailableMoves[i]);
+		scores.push(stateScore);
+ 	}
+	
+	if (playerNum === 2) {
+		var maxIndex = indexOfMax(scores);
+		choice = moves[maxIndex];
+		return scores[maxIndex];
+	} else {
+		var minIndex = indexOfMin(scores);
+		return scores[minIndex];
+	}
+}
+
+function deepCopyBoard(arr) {
+	var newarr = [];
+	arr.forEach(function(row, r, array) {
+		newarr.push(row.slice());
+	});
+	return newarr;
+}
+
+function indexOfMax(arr) {
+    if (arr.length === 0) {
+        return -1;
+    }
+
+    var max = arr[0];
+    var maxIndex = 0;
+
+    for (var i = 1; i < arr.length; i++) {
+        if (arr[i] > max) {
+            maxIndex = i;
+            max = arr[i];
+        }
+    }
+
+    return maxIndex;
+}
+
+function indexOfMin(arr) {
+    if (arr.length === 0) {
+        return -1;
+    }
+
+    var min = arr[0];
+    var minIndex = 0;
+
+    for (var i = 1; i < arr.length; i++) {
+        if (arr[i] < min) {
+            mixIndex = i;
+            mix = arr[i];
+        }
+    }
+
+    return minIndex;
+}
+
+function gameOver(state) {
+	//if anyone won, or if it's a tie.
+	var CompWin = checkDiagonal(2, state) || checkRows(state, 2) || checkColumns(state, 2);
+	var PlayerWin = checkDiagonal(1, state) || checkRows(state, 1) || checkColumns(state, 1);
+	var tie = getAvailableMoves(state).length === 0;
+	if (CompWin || PlayerWin || tie) {
+		return true;
+	} else {
+		return false;
+	}
+
+}
+
+function score(state, depth) {
+	if (getAvailableMoves(state).length === 0) {
+		return 0;
+	}
+	var CompWin = checkDiagonal(2, state) || checkRows(state, 2) || checkColumns(state, 2);
+	if (CompWin) {
+		return 10 - depth;
+	}
+	var PlayerWin = checkDiagonal(1, state) || checkRows(state, 1) || checkColumns(state, 1);
+	if (PlayerWin) {
+		return -10 + depth;
+	} 
+	
+	
+
+}
+function checkRows(state, playerNum) {
+	var rowWin;
+
+	state.forEach(function(item, index, array) {
+		rowWin = true;
+		for (var i = 0; i < item.length; i++) {
+			if (item[i] !== String(playerNum)) {
+				rowWin = false;
+			}
+		}
+	});
+	return rowWin;
+}
+
+function checkColumns(state, playerNum) {
+	var colWin;
+	for (var c = 0; c < 3; c++) {
+		colWin = true;
+		for (var r = 0; r < 3; r++) {
+			if (state[r][c] !== String(playerNum)) {
+				colWin = false;
+				break;
+			}
+		}
+	}
+	return colWin;
+}
+
+function getAvailableMoves(state) {
+	var moves = [];
+	//go through state and see which spots have 0
+	state.forEach(function(row, r, array) {
+		row.forEach(function(val, c, arr) {
+			if (val === '0') {
+				moves.push([r,c]);
+			}
+		});
+	});
+	return moves;
+
+}
+
+function getBoardState(state, move, playerNum) {
+	var newstate = deepCopyBoard(state);
+	newstate[move[0]][move[1]] = String(playerNum);
+	return newstate;
+}
+
 
 // given the board index, must find the corresponding col and set it's background color to Player2Color.
 function updateCSS(boardIndex) {
@@ -242,6 +414,7 @@ function keyUpHandler(e) {
     	// N
     	$('#text').text('lets start!!!');
     	currentPlayerColor = Player2Color;
+    	//chose random for first play.
     	computerMove();
     }
 }
@@ -259,7 +432,7 @@ function handlerOUT() {
 	$(this).css({'box-shadow': 'none'});
 }
 
-function checkDiagonal(PlayerNum) {
+function checkDiagonal(PlayerNum, board) {
 	var rightDiagonal = true;
 	var leftDiagonal = true;
 	for (var i = 0; i < 3; i++) {
