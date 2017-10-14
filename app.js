@@ -1,14 +1,19 @@
-var twoPlayers =false;
 var Player1Color;
-var choice;
 var Player2Color;
+var choice;
+var currentPlayerColor;
 var firstTime = true;
+var twoPlayers =false;
+var hard = false;
+var medium = false;
+var easy = false;
+var levelPicked = false;
+
+var numValid = 0;
 var board = [['0','0','0'],
 			 ['0','0','0'],
 			 ['0','0','0']];
 var colors = ['#5484ed', '#a4bdfc', '#7ae7bf', '#ff887c', '#dbadff'];
-var currentPlayerColor;
-var numValid = 0;
 
 $(document).ready(function() {
 	$('.circleCont').on('click', function() {
@@ -34,12 +39,9 @@ $(document).ready(function() {
 	});
 
 	$('#ok').click(function() {
-		//the first time is player1
-		//the second time is Player 2
+		//first time is true for player1
 		if (firstTime) {
 			Player1Color = $('select[name="colorpicker-shortlist"]').val();
-			console.log('player1', Player1Color);
-
 			var style1 = $('<style>.clicked1 { background-color: ' + Player1Color + ';}</style>');
 			$('html > head').append(style1);
 			
@@ -49,8 +51,7 @@ $(document).ready(function() {
 			} else {
 				//one player game against a robot
 				$('#ok').hide();
-
-				//MAKE SURE THAT THE COLOR IS DIFFERENT FROM THE COLOR THAT THE USER
+				//robot must chose a color that's different from user.
 				while (true) {
 					var randomNum = Math.ceil(Math.random() * 4);
 					Player2Color = colors[randomNum];
@@ -58,33 +59,22 @@ $(document).ready(function() {
 						break;
 					}
 				}
-				
-
-				console.log(Player2Color);
-
 				var style2 = $('<style>.clicked2 { background-color: ' + Player2Color + ';}</style>');
-				$('html > head').append(style2);
-
-				$('#text').text('Would you like to start first?');
+				$('html > head').append(style2);;
+				$('#text').text('Pick skill level: easy, medium, hard?');
 				$('body').on('keyup', keyUpHandler);
 			}
 		} else {
 			Player2Color = $('select[name="colorpicker-shortlist"]').val();
-			// currentPlayerColor = Player1Color;
 			$('#ok').hide();
-			
-
 			var style2 = $('<style>.clicked2 { background-color: ' + Player2Color + ';}</style>');
 			$('html > head').append(style2);
-
-			//Who wants to go first? Player1 or Player2?
 			$('#text').text('Who wants to go first? Enter 1 or 2 on keyboard.');
 			$('body').on('keyup', keyUpHandler);
 		}
 	});
 	
 	$('#replay').on('click', reset);
-
 	$('#home').on('click', function() {
 		$('.BoardWrapper').hide();
 		$('.gameSelectorCont').show();
@@ -96,9 +86,12 @@ $(document).ready(function() {
 	});
 });
 
-/************* RESET****************/
+/* Resets the board. */
 function reset() {
 	numValid = 0;
+	hard = false;
+	medium = false;
+	easy = false;
 	$('.col').each(function() {
 		if ($(this).hasClass('clicked1')) {
 			$(this).removeClass('clicked1');
@@ -110,18 +103,16 @@ function reset() {
 	if (twoPlayers) {
 		$('#text').text('Who wants to go first? Enter 1 or 2 on keyboard.');
 	} else {
-		$('#text').text('Do you want to go first?');
+		$('#text').text('Robot skills: easy, medium, hard?');
 	}
-	
 	$('body').on('keyup', keyUpHandler);
 }
 
 function colClicked() {
-	//if it's a two player or one player game.
 	var notOccupied = ($(this).css("background-color") == "rgb(255, 255, 255)");
+	//only allow the user to click on boxes that are not occupied
 	if (notOccupied) {
 		numValid++;
-
 		if (currentPlayerColor === Player1Color) {
 			$(this).addClass('clicked1');
 		} else {
@@ -133,6 +124,7 @@ function colClicked() {
 
 		board[boardIndex[0]][boardIndex[1]] = String(PlayerNum);
 		if (!checkWin(PlayerNum, boardIndex, false)) {
+			//if didn't win or tie yet,
 			if (currentPlayerColor === Player1Color) {
 				currentPlayerColor = Player2Color;
 			} else {
@@ -146,6 +138,8 @@ function colClicked() {
 	}	
 }
 
+/** Check if the current player won. bool is false when it's a TwoPlayer game. 
+True when it's a one player game against a robot. **/
 function checkWin(PlayerNum, boardIndex, bool) {
 	if (checkDiagonal(PlayerNum, board) || checkColumn(boardIndex, PlayerNum) || checkRow(boardIndex, PlayerNum)) {
 		if (bool) {
@@ -168,20 +162,21 @@ function checkWin(PlayerNum, boardIndex, bool) {
 	return false;
 }
  
-
+/** The computer moves. **/
 function computerMove() {
-	//disable clicks
 	$('.col').off('click');
 	numValid++;
-	// var move = moveHelper();
-	console.log('minmax called');
-	minmax(deepCopyBoard(board), 0, 2);
-	var move = choice;
-	console.log('MINMAX RETURNS CHOSEN MOVE IS ' + move);
+	var move;
+	if (hard || medium) {
+		minmax(deepCopyBoard(board), 0, 2);
+		move = choice;
+	} else if (easy) {
+		move = moveHelper();
+	}
 	var PlayerNum = getPlayerNumber(currentPlayerColor);
     board[move[0]][move[1]] = String(PlayerNum);
-
     updateCSS(move); 
+
     if (!checkWin(PlayerNum, move, true)) {
     	//if didn't win yet, want the user to be able to click
     	currentPlayerColor = Player1Color;
@@ -189,7 +184,7 @@ function computerMove() {
     }
 }
 
-//novice robot
+//Novice robot moves
 function moveHelper() {
 	var boardIndex = getBoardIndex(Math.floor(Math.random() * 8 + 1));
 	while(board[boardIndex[0]][boardIndex[1]] !== '0') {
@@ -198,28 +193,23 @@ function moveHelper() {
 	return boardIndex;
 }
 
-
-
-//master robot
+//Master robot moves
 function minmax(state, depth, playerNum) {
-	
-	//if the game is over
 	if (gameOver(state)) {
 		var result = score(state, depth);
 		return result;
 	} 
-
+	var opposingPlayer;
 	var scores = [];
 	var moves = [];
-	depth += 1;
-	var opposingPlayer;
-
+	if (hard) {
+		depth += 1;
+	}
 	if (playerNum === 2) {
 		opposingPlayer = 1;
 	} else {
 		opposingPlayer = 2;
 	}
-	
 	var AvailableMoves = getAvailableMoves(state);
 
 	for (var i = 0; i < AvailableMoves.length; i++) {
@@ -242,49 +232,7 @@ function minmax(state, depth, playerNum) {
 	}
 }
 
-function deepCopyBoard(arr) {
-	var newarr = [];
-	arr.forEach(function(row, r, array) {
-		newarr.push(row.slice());
-	});
-	return newarr;
-}
-
-function indexOfMax(arr) {
-    if (arr.length === 0) {
-        return -1;
-    }
-
-    var max = arr[0];
-    var maxIndex = 0;
-
-    for (var i = 1; i < arr.length; i++) {
-        if (arr[i] > max) {
-            maxIndex = i;
-            max = arr[i];
-        }
-    }
-
-    return maxIndex;
-}
-
-function indexOfMin(arr) {
-    if (arr.length === 0) {
-        return -1;
-    }
-
-    var min = arr[0];
-    var minIndex = 0;
-
-    for (var i = 1; i < arr.length; i++) {
-        if (arr[i] < min) {
-            minIndex = i;
-            min = arr[i];
-        }
-    }
-    return minIndex;
-}
-
+/** Returns true if either player wins or ties. **/
 function gameOver(state) {
 	//if anyone won, or if it's a tie.
 	var CompWin = checkDiagonal(2, state) || checkRows(state, 2) || checkColumns(state, 2);
@@ -297,6 +245,7 @@ function gameOver(state) {
 	}
 }
 
+/** Calculates the score for MINMAX **/
 function score(state, depth) {
 	var CompWin = checkDiagonal(2, state) || checkRows(state, 2) || checkColumns(state, 2);
 	if (CompWin) {
@@ -311,12 +260,73 @@ function score(state, depth) {
 	}
 }
 
+/** Given the state, find all the available moves a user can make. **/
+function getAvailableMoves(state) {
+	var moves = [];
+	state.forEach(function(row, r, array) {
+		row.forEach(function(val, c, arr) {
+			if (val === '0') {
+				moves.push([r,c]);
+			}
+		});
+	});
+	return moves;
+}
+
+/** Returns a newState, given an old state and a move. Marks the spot with playerNum. **/
+function getBoardState(state, move, playerNum) {
+	var newstate = deepCopyBoard(state);
+	newstate[move[0]][move[1]] = String(playerNum);
+	return newstate;
+}
+
+/** Copies 2D arrays. **/
+function deepCopyBoard(arr) {
+	var newarr = [];
+	arr.forEach(function(row, r, array) {
+		newarr.push(row.slice());
+	});
+	return newarr;
+}
+
+/** Finds the index of the maximum element in an array. **/
+function indexOfMax(arr) {
+    if (arr.length === 0) {
+        return -1;
+    }
+    var max = arr[0];
+    var maxIndex = 0;
+    for (var i = 1; i < arr.length; i++) {
+        if (arr[i] > max) {
+            maxIndex = i;
+            max = arr[i];
+        }
+    }
+    return maxIndex;
+}
+
+/** Finds the index of the minimum element in an array. **/
+function indexOfMin(arr) {
+    if (arr.length === 0) {
+        return -1;
+    }
+    var min = arr[0];
+    var minIndex = 0;
+    for (var i = 1; i < arr.length; i++) {
+        if (arr[i] < min) {
+            minIndex = i;
+            min = arr[i];
+        }
+    }
+    return minIndex;
+}
+
+/** FOR MINMAX ALGORITHM: checkRows gets the state and the playerNum and returns true
+if player won in a row. **/
 function checkRows(state, playerNum) {
 	var result = false;
-
 	state.forEach(function(item, index, array) {
 		var rowWin = true;
-		
 		for (var i = 0; i < item.length; i++) {
 			if (item[i] !== String(playerNum)) {
 				rowWin = false;
@@ -327,6 +337,8 @@ function checkRows(state, playerNum) {
 	return result;
 }
 
+/** FOR MINMAX ALGORITHM: checkColumns gets the state and the playerNum and returns true
+if player won in a column. **/
 function checkColumns(state, playerNum) {
 	var result = false
 	for (var c = 0; c < 3; c++) {
@@ -341,118 +353,26 @@ function checkColumns(state, playerNum) {
 	}
 	return result;
 }
+/** Checks Rows and determines if the PlayerNum has won **/
+function checkRow(boardIndex, PlayerNum) {
+ 	var row = boardIndex[0];
+ 	for (var i = 0; i < 3; i++) {
+ 		if (board[row][i] !== String(PlayerNum)) {
+ 			return false;
+ 		}
+ 	}
+ 	return true;
+ }
 
-function getAvailableMoves(state) {
-	var moves = [];
-	//go through state and see which spots have 0
-	state.forEach(function(row, r, array) {
-		row.forEach(function(val, c, arr) {
-			if (val === '0') {
-				moves.push([r,c]);
-			}
-		});
-	});
-	return moves;
-
-}
-
-function getBoardState(state, move, playerNum) {
-	var newstate = deepCopyBoard(state);
-	newstate[move[0]][move[1]] = String(playerNum);
-	return newstate;
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// given the board index, must find the corresponding col and set it's background color to Player2Color.
-function updateCSS(boardIndex) {
-	console.log('updateCSS called');
-	var num = getColNum(boardIndex);
-	var chosenCol = $(".col[data-num='" + num + "']").addClass('clicked2');
-}
-
-function getColNum(boardIndex) {
-	var row = boardIndex[0];
-	var column = boardIndex[1];
-	if (row === 0) {
-		// 0, 1, 2
-		result = row + column;
-	} else if (row === 1) {
-		//3,4,5
-		result = column + 3;
-	} else {
-		//6,7,8
-		result = column + 6;
-	}
-	return result;
-}
-
-//MAKE THIS CLEANER LATER
-function keyUpHandler(e) {
-	$('body').off('keyup', keyUpHandler);
-    if (e.which == 49) {
-        //1
-        $('#text').text('Player1, please start the game!');
-		currentPlayerColor = Player1Color;
-    	$('.col').hover(handlerIN, handlerOUT);
-    	$('.col').on('click', colClicked);
-    } else if (e.which == 50) {
-    	//2
-    	$('#text').text('Player2, please start the game!');
-		currentPlayerColor = Player2Color;
-    	$('.col').hover(handlerIN, handlerOUT);
-    	$('.col').on('click', colClicked);
-    } else if (e.which == 89) {
-    	// Y
-    	$('#text').text('Ok, Player please start~');
-    	$('.col').hover(handlerIN, handlerOUT);
-    	currentPlayerColor = Player1Color;
-    	$('.col').on('click', colClicked);
-    } else if (e.which == 78) {
-    	// N
-    	$('#text').text('lets start!!!');
-    	$('.col').hover(handlerIN, handlerOUT);
-    	$('.col').on('click', colClicked);
-    	currentPlayerColor = Player2Color;
-    	//chose random for first play.
-    	computerMove();
-    }
-}
-
-function handlerIN() {
-	//if the background color is still white, 
-	var notOccupied = ($(this).css("background-color") === "rgb(255, 255, 255)");
-	if (notOccupied) {
-		$(this).css({'box-shadow': '0px 0px 4px 10px ' + currentPlayerColor + ' inset'});
-	}
-		
-}
-
-function handlerOUT() {
-	$(this).css({'box-shadow': 'none'});
+/** Checks Columns and determines if the PlayerNum has won **/
+function checkColumn(boardIndex, PlayerNum) {
+ 	var col = boardIndex[1];
+ 	for (var i = 0; i < 3; i++) {
+ 		if (board[i][col] !== String(PlayerNum)) {
+ 			return false;
+ 		}
+ 	}
+ 	return true;
 }
 
 function checkDiagonal(PlayerNum, board) {
@@ -473,27 +393,6 @@ function checkDiagonal(PlayerNum, board) {
 	return leftDiagonal || rightDiagonal;
 }
 
- function checkRow(boardIndex, PlayerNum) {
- 	//[0, 1]
- 	var row = boardIndex[0];
- 	for (var i = 0; i < 3; i++) {
- 		if (board[row][i] !== String(PlayerNum)) {
- 			return false;
- 		}
- 	}
- 	return true;
- }
-
- function checkColumn(boardIndex, PlayerNum) {
- 	var col = boardIndex[1];
- 	for (var i = 0; i < 3; i++) {
- 		if (board[i][col] !== String(PlayerNum)) {
- 			return false;
- 		}
- 	}
- 	return true;
- }
-
 function getBoardIndex(position) {
 	// 0 - 8
 	var result = [];
@@ -508,7 +407,22 @@ function getBoardIndex(position) {
 		result.push(position - 6);
 	}
 	return result;
+}
 
+function getBoxNum(boardIndex) {
+	var row = boardIndex[0];
+	var column = boardIndex[1];
+	if (row === 0) {
+		// 0, 1, 2
+		result = row + column;
+	} else if (row === 1) {
+		//3,4,5
+		result = column + 3;
+	} else {
+		//6,7,8
+		result = column + 6;
+	}
+	return result;
 }
 
 function getPlayerNumber(playerColor) {
@@ -519,9 +433,89 @@ function getPlayerNumber(playerColor) {
 	}
 }
 
+
+
 function resetBoard() {
 	board = [['0','0','0'],
 			 ['0','0','0'],
 			 ['0','0','0']];
 }
 
+
+
+
+
+
+//Updates the board CSS.
+function updateCSS(boardIndex) {
+	console.log('updateCSS called');
+	var num = getBoxNum(boardIndex);
+	var chosenCol = $(".col[data-num='" + num + "']").addClass('clicked2');
+}
+
+//MAKE THIS CLEANER LATER
+function keyUpHandler(e) {
+	if (twoPlayers) {
+		if (e.which == 49 ) {
+	        //1
+	        $('body').off('keyup', keyUpHandler);
+	        $('#text').text('Player1, please start the game!');
+			currentPlayerColor = Player1Color;
+	    	$('.col').hover(handlerIN, handlerOUT);
+	    	$('.col').on('click', colClicked);
+    	} else if (e.which == 50 ) {
+	    	//2
+	    	$('body').off('keyup', keyUpHandler);
+	    	$('#text').text('Player2, please start the game!');
+			currentPlayerColor = Player2Color;
+	    	$('.col').hover(handlerIN, handlerOUT);
+	    	$('.col').on('click', colClicked);
+	    }
+	} else {
+		  if (e.which == 89 && levelPicked) {
+	    	// Y
+	    	$('body').off('keyup', keyUpHandler);
+	    	$('#text').text('Ok, Player please start~');
+	    	$('.col').hover(handlerIN, handlerOUT);
+	    	$('.col').on('click', colClicked);
+	    	currentPlayerColor = Player1Color;
+	    } else if (e.which == 78 && levelPicked) {
+	    	// N
+	    	$('body').off('keyup', keyUpHandler);
+	    	$('#text').text('lets start!!!');
+	    	$('.col').hover(handlerIN, handlerOUT);
+	    	$('.col').on('click', colClicked);
+	    	currentPlayerColor = Player2Color;
+	    	//chose random for first play.
+	    	computerMove();
+	    } else if (e.which === 69) {
+	    	//easy
+	    	easy = true;
+	    	$('body').off('keyup', keyUpHandler);
+	    	levelPicked = true;
+	    	$('#text').text('Do you want to go first?');
+	    	$('body').on('keyup', keyUpHandler);
+
+	    } else if (e.which === 77 || e.which === 72) {
+	    	//medium and hard
+	    	medium = e.which === 77;
+	    	hard = e.which === 72;
+	    	$('body').off('keyup', keyUpHandler);
+	    	levelPicked = true;
+	    	$('#text').text('Do you want to go first?');
+	    	$('body').on('keyup', keyUpHandler);
+	    }
+	}
+}
+
+function handlerIN() {
+	//if the background color is still white, 
+	var notOccupied = ($(this).css("background-color") === "rgb(255, 255, 255)");
+	if (notOccupied) {
+		$(this).css({'box-shadow': '0px 0px 4px 10px ' + currentPlayerColor + ' inset'});
+	}
+}
+
+function handlerOUT() {
+	$(this).css({'box-shadow': 'none'});
+}
