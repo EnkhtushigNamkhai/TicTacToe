@@ -1,5 +1,6 @@
 var twoPlayers =false;
 var Player1Color;
+var choice;
 var Player2Color;
 var firstTime = true;
 var board = [['0','0','0'],
@@ -166,6 +167,7 @@ function checkWin(PlayerNum, boardIndex, bool) {
 	}
 	return false;
 }
+ 
 
 function computerMove() {
 	//disable clicks
@@ -173,13 +175,9 @@ function computerMove() {
 	numValid++;
 	// var move = moveHelper();
 	console.log('minmax called');
-	minmax(deepCopyBoard(board) , 0, 2);
+	minmax(deepCopyBoard(board) , 2);
 	var move = choice;
 	console.log('MINMAX RETURNS CHOSEN MOVE IS ' + move);
-
-	
-	
-	 
 	var PlayerNum = getPlayerNumber(currentPlayerColor);
     board[move[0]][move[1]] = String(PlayerNum);
 
@@ -191,11 +189,8 @@ function computerMove() {
     }
 }
 
-// comes up with a index [,] of where in the array it will go to
+//novice robot
 function moveHelper() {
-	// minmax(board, 0, 2);
-	// board = choice;
-	//choose random number between 0 - 8.
 	var boardIndex = getBoardIndex(Math.floor(Math.random() * 8 + 1));
 	while(board[boardIndex[0]][boardIndex[1]] !== '0') {
 		boardIndex = getBoardIndex(Math.floor(Math.random() * 8 + 1));
@@ -203,22 +198,21 @@ function moveHelper() {
 	return boardIndex;
 }
 
-var choice;
 
-//returns the score 
 
-var firstTIMEHERE = true;
-function minmax(state, depth, playerNum) {
-	var scores = [];
-	var moves = [];
-
-	depth += 1;
+//master robot
+function minmax(state, playerNum) {
+	
 	//if the game is over
 	if (gameOver(state)) {
-		var result = score(state, depth);
+		var result = score(state);
 		return result;
-	}
+	} 
 
+	var scores = [];
+	var moves = [];
+	// depth += 1;
+	var opposingPlayer;
 
 	if (playerNum === 2) {
 		opposingPlayer = 1;
@@ -227,11 +221,14 @@ function minmax(state, depth, playerNum) {
 	}
 	
 	var AvailableMoves = getAvailableMoves(state);
+
 	for (var i = 0; i < AvailableMoves.length; i++) {
 		var newState = getBoardState(state, AvailableMoves[i], playerNum);
-		var stateScore = minmax(newState, depth, opposingPlayer);
+		scores.push(minmax(newState, opposingPlayer));
+		if (AvailableMoves.length === 5) {
+			console.log(scores);
+		}
 		moves.push(AvailableMoves[i]);
-		scores.push(stateScore);
  	}
 	
 	if (playerNum === 2) {
@@ -240,6 +237,7 @@ function minmax(state, depth, playerNum) {
 		return scores[maxIndex];
 	} else {
 		var minIndex = indexOfMin(scores);
+		choice = moves[minIndex];
 		return scores[minIndex];
 	}
 }
@@ -280,11 +278,10 @@ function indexOfMin(arr) {
 
     for (var i = 1; i < arr.length; i++) {
         if (arr[i] < min) {
-            mixIndex = i;
-            mix = arr[i];
+            minIndex = i;
+            min = arr[i];
         }
     }
-
     return minIndex;
 }
 
@@ -298,51 +295,51 @@ function gameOver(state) {
 	} else {
 		return false;
 	}
-
 }
 
-function score(state, depth) {
-	if (getAvailableMoves(state).length === 0) {
-		return 0;
-	}
+function score(state) {
 	var CompWin = checkDiagonal(2, state) || checkRows(state, 2) || checkColumns(state, 2);
 	if (CompWin) {
-		return 10 - depth;
+		return 10;
 	}
 	var PlayerWin = checkDiagonal(1, state) || checkRows(state, 1) || checkColumns(state, 1);
 	if (PlayerWin) {
-		return -10 + depth;
+		return -10;
 	} 
-	
-	
-
+	if (getAvailableMoves(state).length === 0) {
+		return 0;
+	}
 }
+
 function checkRows(state, playerNum) {
-	var rowWin;
+	var result = false;
 
 	state.forEach(function(item, index, array) {
-		rowWin = true;
+		var rowWin = true;
+		
 		for (var i = 0; i < item.length; i++) {
 			if (item[i] !== String(playerNum)) {
 				rowWin = false;
 			}
 		}
+		result = result || rowWin;
 	});
-	return rowWin;
+	return result;
 }
 
 function checkColumns(state, playerNum) {
-	var colWin;
+	var result = false
 	for (var c = 0; c < 3; c++) {
-		colWin = true;
+		var colWin = true;
 		for (var r = 0; r < 3; r++) {
 			if (state[r][c] !== String(playerNum)) {
 				colWin = false;
 				break;
 			}
 		}
+		result = result || colWin;
 	}
-	return colWin;
+	return result;
 }
 
 function getAvailableMoves(state) {
@@ -364,6 +361,30 @@ function getBoardState(state, move, playerNum) {
 	newstate[move[0]][move[1]] = String(playerNum);
 	return newstate;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 // given the board index, must find the corresponding col and set it's background color to Player2Color.
@@ -437,14 +458,14 @@ function checkDiagonal(PlayerNum, board) {
 	var leftDiagonal = true;
 	for (var i = 0; i < 3; i++) {
 		if (board[i][i] !== String(PlayerNum)) {
-			rightDiagonal = false && rightDiagonal;
+			rightDiagonal = false;
 		}
 
 		if (board[i][2 - i] !== String(PlayerNum)) {
-			leftDiagonal = false && leftDiagonal;
+			leftDiagonal = false;
 		}
 		if (rightDiagonal === false && leftDiagonal === false) {
-			break;
+			return false;
 		}
 	}
 	return leftDiagonal || rightDiagonal;
