@@ -175,7 +175,7 @@ function computerMove() {
 	numValid++;
 	// var move = moveHelper();
 	console.log('minmax called');
-	minmax(deepCopyBoard(board) , 2);
+	minmax(deepCopyBoard(board), 0, 2);
 	var move = choice;
 	console.log('MINMAX RETURNS CHOSEN MOVE IS ' + move);
 	var PlayerNum = getPlayerNumber(currentPlayerColor);
@@ -201,17 +201,17 @@ function moveHelper() {
 
 
 //master robot
-function minmax(state, playerNum) {
+function minmax(state, depth, playerNum) {
 	
 	//if the game is over
 	if (gameOver(state)) {
-		var result = score(state);
+		var result = score(state, depth);
 		return result;
 	} 
 
 	var scores = [];
 	var moves = [];
-	// depth += 1;
+	depth += 1;
 	var opposingPlayer;
 
 	if (playerNum === 2) {
@@ -224,7 +224,7 @@ function minmax(state, playerNum) {
 
 	for (var i = 0; i < AvailableMoves.length; i++) {
 		var newState = getBoardState(state, AvailableMoves[i], playerNum);
-		scores.push(minmax(newState, opposingPlayer));
+		scores.push(minmax(newState, depth, opposingPlayer));
 		if (AvailableMoves.length === 5) {
 			console.log(scores);
 		}
@@ -297,14 +297,14 @@ function gameOver(state) {
 	}
 }
 
-function score(state) {
+function score(state, depth) {
 	var CompWin = checkDiagonal(2, state) || checkRows(state, 2) || checkColumns(state, 2);
 	if (CompWin) {
-		return 10;
+		return 10 - depth;
 	}
 	var PlayerWin = checkDiagonal(1, state) || checkRows(state, 1) || checkColumns(state, 1);
 	if (PlayerWin) {
-		return -10;
+		return -10 + depth;
 	} 
 	if (getAvailableMoves(state).length === 0) {
 		return 0;
@@ -434,6 +434,8 @@ function keyUpHandler(e) {
     } else if (e.which == 78) {
     	// N
     	$('#text').text('lets start!!!');
+    	$('.col').hover(handlerIN, handlerOUT);
+    	$('.col').on('click', colClicked);
     	currentPlayerColor = Player2Color;
     	//chose random for first play.
     	computerMove();
