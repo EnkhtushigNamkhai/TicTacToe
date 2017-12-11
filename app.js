@@ -18,7 +18,7 @@ var colors = ['#5484ed', '#a4bdfc', '#7ae7bf', '#ff887c', '#dbadff'];
 $(document).ready(function() {
 	$('.circleCont').on('click', function() {
 		var numPlayers = $(this).find('p').text();
-		if (numPlayers ==='1') {
+		if (numPlayers === '1') {
 			$('.gameSelectorCont').hide();
 			$('.BoardWrapper').show();
 			$('#text').text('Player, please select your color');
@@ -27,7 +27,7 @@ $(document).ready(function() {
 			
 
 		} else {
-			console.log('two players');
+			// console.log('two players');
 			twoPlayers = true;
 			$('.gameSelectorCont').hide();
 			$('.BoardWrapper').show();
@@ -61,7 +61,7 @@ $(document).ready(function() {
 				}
 				var style2 = $('<style>.clicked2 { background-color: ' + Player2Color + ';}</style>');
 				$('html > head').append(style2);;
-				$('#text').text('Pick skill level: easy, medium, hard?');
+				$('#text').text('Enter on keyboard: easy(e), medium(m) or hard(h)?');
 				$('body').on('keyup', keyUpHandler);
 			}
 		} else {
@@ -88,6 +88,7 @@ $(document).ready(function() {
 
 /* Resets the board. */
 function reset() {
+	//maybe fix this later, disable reset at the beginning.
 	numValid = 0;
 	hard = false;
 	medium = false;
@@ -103,7 +104,7 @@ function reset() {
 	if (twoPlayers) {
 		$('#text').text('Who wants to go first? Enter 1 or 2 on keyboard.');
 	} else {
-		$('#text').text('Robot skills: easy, medium, hard?');
+		$('#text').text('Enter on keyboard: easy(e), medium(m) or hard(h)?');
 	}
 	$('body').on('keyup', keyUpHandler);
 }
@@ -167,9 +168,12 @@ function computerMove() {
 	$('.col').off('click');
 	numValid++;
 	var move;
-	if (hard || medium) {
+	if (hard) {
 		minmax(deepCopyBoard(board), 0, 2);
 		move = choice;
+	} else if (medium) {
+		//player 1 is the user and player 2 is the robot
+		move = mediumAlgorithm(1, deepCopyBoard(board));
 	} else if (easy) {
 		move = moveHelper();
 	}
@@ -191,6 +195,72 @@ function moveHelper() {
 		boardIndex = getBoardIndex(Math.floor(Math.random() * 8 + 1));
 	}
 	return boardIndex;
+}
+
+function mediumAlgorithm(PlayerNum, board) {
+	var rightDiagonalTop = true;
+	var rightDiagonalBottom = true;
+
+	var leftDiagonalTop = true;
+	var leftDiagonalBottom = true;
+	for (var i = 0; i < 2; i++) {
+		//0, 1
+		// console.log(board[i][i], String(PlayerNum));
+		if (board[i][i] === String(PlayerNum)) {
+			// console.log('ok');
+			rightDiagonalTop &= true;
+		} else if (board[i][i] !== PlayerNum)  {
+			rightDiagonalTop = false;
+		}
+
+		if (board[2 - i][2 - i] === String(PlayerNum)) {
+			rightDiagonalBottom &= true;
+		} else if (board[2 - i][2 - i] !== String(PlayerNum)) {
+			rightDiagonalBottom = false;
+		}
+
+		if (board[i][2 - i] === String(PlayerNum)) {
+			leftDiagonalTop &= true;
+		} else if (board[i][2 - i] !== String(PlayerNum)) {
+			leftDiagonalTop = false;
+		}
+
+		if (board[2 - i][i] === String(PlayerNum)) {
+			leftDiagonalBottom &= true;
+		} else if (board[2 - i][i] !== String(PlayerNum)) {
+			leftDiagonalBottom = false;
+		}
+	}
+	if (rightDiagonalTop && board[2][2] === '0') {
+		return [2, 2];
+	} else if (rightDiagonalBottom && board[0][0] === '0') {
+		return [0, 0];
+	
+	} else if (leftDiagonalTop && board[2][0] === '0') {
+		return [2, 0];
+
+	} else if (leftDiagonalBottom && board[0][2] === '0') {
+		return [0, 2];
+	}
+
+	//then check if the robot can win,if it can win with 1 more move, put that move
+	var moves = getAvailableMoves(board);
+	var result;
+
+	for (var i = 0; i < moves.length; i++) {
+		var move = moves[i];
+		board[move[0]][move[1]] = '2';
+
+		if (checkDiagonal(2, board) || checkRows(board, 2) || checkColumns(board, 2)) {
+			//make move
+			return move;
+		}
+		//undo move on board
+		board[move[0]][move[1]] = '0';
+	}
+
+	//none of the diagonals have 2 in a row
+	return moveHelper();
 }
 
 //Master robot moves
@@ -215,9 +285,6 @@ function minmax(state, depth, playerNum) {
 	for (var i = 0; i < AvailableMoves.length; i++) {
 		var newState = getBoardState(state, AvailableMoves[i], playerNum);
 		scores.push(minmax(newState, depth, opposingPlayer));
-		if (AvailableMoves.length === 5) {
-			console.log(scores);
-		}
 		moves.push(AvailableMoves[i]);
  	}
 	
@@ -251,14 +318,18 @@ function score(state, depth) {
 	if (CompWin) {
 		return 10 - depth;
 	}
+
 	var PlayerWin = checkDiagonal(1, state) || checkRows(state, 1) || checkColumns(state, 1);
 	if (PlayerWin) {
 		return -10 + depth;
-	} 
-	if (getAvailableMoves(state).length === 0) {
+	}  
+
+	var moves = getAvailableMoves(state).length;
+	if (moves === 0) {
 		return 0;
 	}
 }
+
 
 /** Given the state, find all the available moves a user can make. **/
 function getAvailableMoves(state) {
@@ -441,14 +512,9 @@ function resetBoard() {
 			 ['0','0','0']];
 }
 
-
-
-
-
-
 //Updates the board CSS.
 function updateCSS(boardIndex) {
-	console.log('updateCSS called');
+	// console.log('updateCSS called');
 	var num = getBoxNum(boardIndex);
 	var chosenCol = $(".col[data-num='" + num + "']").addClass('clicked2');
 }
@@ -493,7 +559,7 @@ function keyUpHandler(e) {
 	    	easy = true;
 	    	$('body').off('keyup', keyUpHandler);
 	    	levelPicked = true;
-	    	$('#text').text('Do you want to go first?');
+	    	$('#text').text('Do you want to go first? (y/n)');
 	    	$('body').on('keyup', keyUpHandler);
 
 	    } else if (e.which === 77 || e.which === 72) {
@@ -502,7 +568,7 @@ function keyUpHandler(e) {
 	    	hard = e.which === 72;
 	    	$('body').off('keyup', keyUpHandler);
 	    	levelPicked = true;
-	    	$('#text').text('Do you want to go first?');
+	    	$('#text').text('Do you want to go first? (y/n)');
 	    	$('body').on('keyup', keyUpHandler);
 	    }
 	}
